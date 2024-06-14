@@ -1,0 +1,229 @@
+#!/bin/python
+
+import json, sys
+from colorama import Fore
+import os
+from pathlib import Path
+
+GLOBAL_TASKS_FOLDER = Path.home() / "Documentos" / "tasks"
+GLOBAL_TASKS_FILE= GLOBAL_TASKS_FOLDER / "tasks.json"
+
+
+class Tasks:
+    global_tasks = []
+
+    def __init__(self):
+        if (not os.path.exists(GLOBAL_TASKS_FILE)):
+            self.clear_tasks()
+        else:
+            self.load_tasks()
+
+    def load_tasks(self):
+        global global_tasks
+
+        if os.path.exists(GLOBAL_TASKS_FILE):
+            with open(GLOBAL_TASKS_FILE) as f:
+                global_tasks = json.load(f)
+
+    def clear_tasks(self ):
+        if not (os.path.isdir(GLOBAL_TASKS_FOLDER)):
+            os.mkdir(GLOBAL_TASKS_FOLDER)
+
+        with open(GLOBAL_TASKS_FILE, "w") as f:
+            json.dump([], f)
+
+    def save_tasks(self):
+        with open(GLOBAL_TASKS_FILE, "w") as f:
+            json.dump(global_tasks, f, indent=4)
+
+    def add_task(self, name, description):
+        global_tasks.append({
+            "name" : name,
+            "description" : description,
+            "status" : "inactive"
+        })
+
+        print(Fore.GREEN + f"[ # ] Task {name} Added! [ # ]" + Fore.RESET)
+
+
+    def remove_task(self, name):
+        id_ =0
+
+        for task in global_tasks:
+            if (task["name"] == name):
+                break
+            id_ += 1
+        
+        global_tasks.pop(id_)
+
+        print(Fore.GREEN + f"[ # ] Task {name} Removed! [ # ]" + Fore.RESET)
+
+
+    def list_tasks(self):
+        print(Fore.BLUE + "[====] Listing Tasks [====]" + Fore.RESET)
+
+        if (global_tasks.__len__() < 1):
+            print(Fore.BLACK + "[*] Empty" + Fore.RESET)
+
+        else:
+            for task in global_tasks:
+
+                color = Fore.RESET
+
+                if (task["status"] == "active"):
+                    color = Fore.CYAN
+                elif (task["status"] == "inactive"):
+                    color = Fore.BLACK
+                elif (task["status"] == "completed"):
+                    color = Fore.GREEN
+
+                print(color + f"{task['name']} [{task['status']}]" + Fore.RESET)
+
+    def change_task_status(self, name, status):
+        global global_tasks
+
+        for task in global_tasks:
+
+            if (task["name"] == name):
+                task["status"] =status
+                return True
+
+        return False
+
+    def complete_task(self, name):
+        if (change_task_status(name, "complete")):
+            print(Fore.GREEN + f"[ # ] Task {name} Completed! [ # ]")
+
+    def activate_task(self,name):
+        if (change_task_status(name, "active")):
+            print(Fore.GREEN + f"[ # ] Task {name} Activated! [ # ]")
+    
+    def deactivate_task(self, name):
+        if (change_task_status(name, "inactive")):
+            print(Fore.GREEN + f"[ # ] Task {name} Deactivated! [ # ]")
+
+class Action():
+
+    def __init__(self, path="", description="", req_parameters=[], callback=None):
+        self.path = path
+        self.description = description
+        self.req_parameters = req_parameters
+        self.callback = callback
+
+    def execute(self,parameters):
+        self.callback(parameters)
+
+class Actions():
+
+    def __init__(self):
+        self.actions = []
+
+    def add_action(self, action):
+        self.actions.append(action)
+
+    def execute_action(self):
+        program_arguments = " ".join(sys.argv[1:])
+        current_action_parameters = []
+        current_action = None
+
+        for action in self.actions:
+            if (program_arguments.startswith(action.path)):
+                current_action = action
+                path_len = action.path.__len__()
+                current_action_parameters = program_arguments[path_len+1:].split(" ")
+                current_action = action
+                action.execute(current_action_parameters)
+                return True
+        
+        return False
+
+    def print_usage(self):
+        print(f"Usage: {sys.argv[0]} action [parameters]")
+
+        for action in self.actions:
+            required_parameters = ""
+
+            if (action.req_parameters.__len__() > 0):
+                required_parameters = f"[{", ".join(action.req_parameters)}]"
+
+            print(f"Action : {action.path} {required_parameters}")
+
+
+def set_tasks_actions(tasks, actions):
+    def add_task_action(parameters):
+        name = parameters[0]
+        description = parameters[1]
+        tasks.add_task(name, description)
+    
+    def remove_task_action(parameters):
+        name = parameters[0]
+        tasks.remove_task(name)
+
+    def list_tasks_action(parameters):
+        tasks.list_tasks()
+    
+    def complete_task_action(parameters):
+        name = parameters[0]
+        tasks.complete_task(name)
+    
+    def activate_task_action(parameters):
+        name = parameters[0]
+        tasks.activate_task(name)
+    
+    def deactivate_task(parameters):
+        name = parameters[0]
+        tasks.deactivate_task(name)
+
+    actions.add_action(
+        Action("tasks add", "adds an task", req_parameters=["name", "description"],callback=add_task_action)
+    )
+
+    actions.add_action(
+        Action("tasks remove", "removes an task", req_parameters=["name"], callback=remove_task_action)
+    )
+
+    actions.add_action(
+        Action("tasks list", "lists an task", req_parameters=[], callback=list_tasks_action)
+    )
+
+    actions.add_action(
+        Action("tasks complete", "completes an task", req_parameters=["name"], callback=complete_task_action)
+    )
+
+    actions.add_action(
+        Action("tasks activate", "activates an task", req_parameters=["name"], callback=activate_task_action)
+    )
+
+    actions.add_action(
+        Action("tasks deactivate", "desactivates an task", req_parameters=["name"], callback=deactivate_task)
+    )
+
+
+def main():
+
+    tasks = Tasks()
+    actions = Actions()
+
+    def print_help(parameters):
+        actions.print_usage()
+
+    actions.add_action(
+        Action("-h", "help", req_parameters=[], callback=print_help)
+    )
+
+    set_tasks_actions(tasks, actions)
+    
+    if (actions.execute_action() == False):
+        actions.print_usage()
+    else:
+        tasks.save_tasks()
+
+main()
+
+
+
+
+
+
+    
+    
