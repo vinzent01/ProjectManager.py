@@ -11,7 +11,7 @@ You can create, activate, deactivate, remove, complete tasks
 
 ## Commands
 
-``bash
+```bash
   Usage: /usr/bin/pManager action [parameters]
 
   Action : -h 
@@ -21,9 +21,9 @@ You can create, activate, deactivate, remove, complete tasks
   Action : tasks complete [name]
   Action : tasks activate [name]
   Action : tasks deactivate [name]
-``
+```
 
 ## Todo 
 
-[-] Add per project local tasks
-[-] add Pomodoro timer
+- [ ] Add per project local tasks
+- [ ] add Pomodoro timer
